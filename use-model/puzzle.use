@@ -1,0 +1,139 @@
+model Puzzle
+
+/* Classes Thing, Property, Clue: An element in a set of *Thing* objects
+(e.g., a set of cars with particular top and body colors) represents a
+possible solution for a modelled logical puzzle. A thing is linked to
+*Property* objects which describe with name-value pairs relevant aspects
+of a thing (e.g., a car with top-red and body-blue). A set of *Clue*
+objects give hints in order to identify a (unique) solution for the
+puzzle (e.g., the car body is not red; if the car top is not blue, then
+the car body is green). */
+
+class Thing
+attributes
+  banned:Boolean
+  toStr:Sequence(String) derive:
+    self.property->iterate(p;
+      r:Sequence(String)=Sequence{}|
+      r->including(p.name+' '+p.value))->sortedBy(e|e)
+operations
+value(propertyP:String):String=
+  self.property->any(p|p.name=propertyP).value
+
+valid(c:Clue):Boolean = -- Thing self regards Clue c as valid
+  let t:Thing = self in  -- Prem prop P; Conc prop C; Val V;
+  if c.prem=c.conc and                            -- ground
+     c.negatedC=false then                        -- C=V
+     t.value(c.conc.name)=c.conc.value else
+  if c.prem=c.conc and                            -- ground
+     c.negatedC=true then                         -- C<>V
+     t.value(c.conc.name)<>c.conc.value else
+  if c.prem<>c.conc and                           -- non-ground
+     c.negatedP=false and c.negatedC=false then   -- P=V1 => C=V2
+       t.value(c.prem.name)=c.prem.value implies
+       t.value(c.conc.name)=c.conc.value else
+  if c.prem<>c.conc and                           -- non-ground
+     c.negatedP=false and c.negatedC=true then    -- P=V1 => C<>V2
+       t.value(c.prem.name)=c.prem.value implies
+       t.value(c.conc.name)<>c.conc.value else
+  if c.prem<>c.conc and                           -- non-ground
+     c.negatedP=true and c.negatedC=false then    -- P<>V1 => C=V2
+       t.value(c.prem.name)<>c.prem.value implies
+       t.value(c.conc.name)=c.conc.value else
+  if c.prem<>c.conc and                           -- non-ground
+     c.negatedP=true and c.negatedC=true then     -- P<>V1 => C<>V2
+       t.value(c.prem.name)<>c.prem.value implies
+       t.value(c.conc.name)<>c.conc.value
+  else false endif endif endif endif endif endif
+
+bannedBy(c:Clue):Boolean = not(self.valid(c)) -- Thing self bannedBy Clue c
+
+cluesValid():Set(Thing) =
+  Thing.allInstances->select(t |
+    Clue.allInstances->forAll(c | t.valid(c)))
+end
+
+class Property
+attributes
+  name:String
+  value:String
+end
+
+association ThingProperty between
+  Thing    [1..*] role thing
+  Property [1..*] role property
+end
+
+class Clue
+attributes
+  prem:Property
+  negatedP:Boolean
+  conc:Property
+  negatedC:Boolean
+  toStr:String derive:
+    if prem=conc then '' else
+       prem.name+if negatedP then '<>' else '=' endif+prem.value+' => '
+    endif+
+    conc.name+if negatedC then '<>' else '=' endif+conc.value
+  bans:String derive:
+    if prem=conc then '' else
+       prem.name+if negatedP then '<>' else '=' endif+prem.value+' & '
+    endif+
+    conc.name+if negatedC then '=' else '<>' endif+conc.value
+
+
+  bannedThings: Set(Thing) derive:
+     Thing.allInstances()->select(t | t.bannedBy(self))
+
+operations
+bansOCL():String = ' Thing.allInstances->select('+
+  if prem=conc then
+    'value(\''+conc.name+'\')'+
+    if negatedC then '=' else '<>' endif+'\''+conc.value+'\''
+  else
+    'value(\''+prem.name   +'\')'+
+    if negatedP then '<>' else '=' endif+'\''+prem.value+'\''+' and '+
+    'value(\''+conc.name+'\')'+
+    if negatedC then '=' else '<>' endif+'\''+conc.value+'\''
+  endif+') '
+end
+
+constraints
+
+context t1,t2:Thing inv sameNumProperty:
+  t1.property->size=t2.property->size
+  -- t1.property->size=2
+
+context p1,p2:Property inv sameNumThing:
+  p1.thing->size=p2.thing->size
+  -- p1.thing->size=3
+
+context p1,p2:Property inv uniqueNameValue:
+    p1<>p2 implies (p1.name<>p2.name or p1.value<>p2.value)
+
+context t1,t2:Thing inv uniqueProperty:
+  t1<>t2 implies t1.property<>t2.property
+
+context t:Thing inv uniquePropertyName:
+  t.property->forAll(p1,p2 | p1<>p2 implies p1.name<>p2.name)
+
+context c:Clue inv premConcEQ_negatedEQ:
+  c.prem=c.conc implies c.negatedP=c.negatedC
+
+context c1,c2:Clue inv uniqueClue:
+  let c1Ground=(c1.prem=c1.conc) in
+  let c2Ground=(c2.prem=c2.conc) in
+  c1<>c2 implies
+  if     c1Ground  and     c2Ground  then c1.conc<>c2.conc else
+  if     c1Ground  and not(c2Ground) then true             else
+  if not(c1Ground) and     c2Ground  then true             else
+  if not(c1Ground) and not(c2Ground) then
+     c1.prem<>c2.prem or c1.conc<>c2.conc or
+     c1.negatedP<>c2.negatedP or c1.negatedC<>c2.negatedC
+  else false endif endif endif endif
+
+context Thing inv thingsWithCluesValid_EQ_thingsNotBanned:
+  cluesValid()=Thing.allInstances->select(t | t.banned=false)
+
+context Thing inv oneThingWithCluesValidNotBanned: -- one solution
+  cluesValid()->select(t | t.banned=false)->size=1

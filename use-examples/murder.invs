@@ -1,0 +1,13 @@
+context Property inv nameFitsValue:
+  (name='who'   implies
+    Set{'Adam','Butler','Contess','Duke'}->includes(value)) and
+  (name='where' implies
+    Set{'DiningR','Garden','Kitchen','Library'}->includes(value)) and
+  (name='how'   implies
+    Set{'Gun','Knife','Rope','Hammer'}->includes(value))
+
+context p:Property inv has16Thing:
+  p.thing->size()=16 -- 16*12 = 192 links
+
+context t:Thing inv has3Property:
+  t.property->size()=3 -- 3*64 = 192 links

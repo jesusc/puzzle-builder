@@ -1,0 +1,26 @@
+context Property inv nameFitsValue:
+  (name='Author'   implies
+    Set{'Antonio','Martin','Jesus'}->includes(value)) and
+  (name='Topic' implies
+    Set{'Uncertainty','Tooling','Validation'}->includes(value)) and
+  (name='Origin'   implies
+    Set{'Malaga','Murcia','Dortmund'}->includes(value))
+
+context Thing inv solutionAntonio:
+  Thing.allInstances->exists(t | t.banned=false and
+    t.value('Author')='Antonio' and
+    t.value('Topic')='Uncertainty' and
+    t.value('Origin')='Malaga')
+
+context Clue inv oneInequationThreeConditional:
+  Clue.allInstances->exists(c1,c2,c3 |
+    c1<>c2 and c1<>c3 and c2<>c3 and
+    c1.prem<>c1.conc and c2.prem<>c2.conc and c3.prem<>c3.conc) and
+  Clue.allInstances->exists(c |
+    c.prem=c.conc and c.negatedP=true)
+
+context Thing inv threeProperty:
+  property->size=3 -- 81 / 27 = 3
+
+context Property inv nineThing:
+  thing->size=9 -- 81 / 9 = 9
