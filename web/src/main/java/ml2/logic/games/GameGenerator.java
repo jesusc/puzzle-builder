@@ -67,7 +67,7 @@ public class GameGenerator extends AbstractGameGenerator {
 		
 		puzzleModel = puzzleModel + "\n\n" + additionalConstraints + "\n\n" + generatedConstraints;
 		
-		Files.write(puzzleModel.getBytes(), new File("/tmp/s.use"));
+		//Files.write(puzzleModel.getBytes(), new File("/tmp/s.use"));
 		
 		
 		DirectUseMvFinder finder = new DirectUseMvFinder();
@@ -101,6 +101,7 @@ public class GameGenerator extends AbstractGameGenerator {
 	private static String readPuzzleModel() {
 		try {
 			try (InputStream inputStream = GameGenerator.class.getClassLoader().getResourceAsStream("puzzle.use")) {				
+			//try(InputStream inputStream = new FileInputStream(new File("/home/jesus/projects/puzzle-builder/web/src/main/resources/puzzle.use"))) {
 				return org.apache.commons.io.IOUtils.toString(inputStream, Charset.defaultCharset());
 			}
 		} catch (IOException e) {
